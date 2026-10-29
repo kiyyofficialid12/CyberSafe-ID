@@ -377,6 +377,7 @@ public class MainActivity extends Activity {
         button(panel, "SELECT APK FILE", this::pickApk);
         content.addView(panel);
 
+        button(content, "REVIEW INSTALLED APPS", this::scanInstalledApps);
         section("ANALYSIS TOOLS", "3 CHECKS");
         module("01", "SHA-256 FINGERPRINT",
             "Menghasilkan hash untuk membandingkan identitas file.",
@@ -394,6 +395,89 @@ public class MainActivity extends Activity {
         content.addView(text(
             "Privasi: file dianalisis secara lokal. Hasil heuristik bukan jaminan bebas malware.",
             11, MUTED, false));
+    }
+
+
+    void scanInstalledApps() {
+        try {
+            PackageManager pm = getPackageManager();
+            List<PackageInfo> apps =
+                pm.getInstalledPackages(PackageManager.GET_PERMISSIONS);
+
+            Collections.sort(apps, (a, b) -> {
+                String na = String.valueOf(
+                    pm.getApplicationLabel(a.applicationInfo));
+                String nb = String.valueOf(
+                    pm.getApplicationLabel(b.applicationInfo));
+                return na.compareToIgnoreCase(nb);
+            });
+
+            ArrayList<PackageInfo> visible = new ArrayList<>();
+            ArrayList<String> labels = new ArrayList<>();
+
+            for (PackageInfo pi : apps) {
+                if (pi.applicationInfo == null) continue;
+                String name = String.valueOf(
+                    pm.getApplicationLabel(pi.applicationInfo));
+                labels.add(name + "\n" + pi.packageName);
+                visible.add(pi);
+            }
+
+            if (visible.isEmpty()) {
+                info("Installed Apps", "Tidak ada aplikasi yang dapat ditampilkan.");
+                return;
+            }
+
+            new AlertDialog.Builder(this)
+                .setTitle("INSTALLED APP REVIEW")
+                .setItems(labels.toArray(new String[0]), (dialog, which) ->
+                    showInstalledAppReport(visible.get(which)))
+                .setNegativeButton("Tutup", null)
+                .show();
+
+        } catch (Exception e) {
+            info("Scan Error", "Gagal membaca daftar aplikasi:\n" + e.getMessage());
+        }
+    }
+
+    void showInstalledAppReport(PackageInfo pi) {
+        PackageManager pm = getPackageManager();
+        String appName = String.valueOf(
+            pm.getApplicationLabel(pi.applicationInfo));
+        StringBuilder report = new StringBuilder();
+        int indicators = 0;
+
+        report.append("APP: ").append(appName)
+            .append("\nPACKAGE: ").append(pi.packageName)
+            .append("\nVERSION: ").append(pi.versionName)
+            .append("\n\nREQUESTED PERMISSIONS:\n");
+
+        String[] permissions = pi.requestedPermissions;
+        if (permissions == null || permissions.length == 0) {
+            report.append("Tidak ada izin yang terbaca.\n");
+        } else {
+            for (String permission : permissions) {
+                report.append("• ").append(permission).append("\n");
+                String value = permission.toLowerCase(Locale.ROOT);
+                if (value.contains("request_install_packages") ||
+                    value.contains("read_sms") ||
+                    value.contains("send_sms") ||
+                    value.contains("record_audio") ||
+                    value.contains("read_call_log") ||
+                    value.contains("accessibility")) {
+                    indicators++;
+                }
+            }
+        }
+
+        report.append("\nBASIC INDICATORS: ")
+            .append(indicators >= 3 ? "REVIEW RECOMMENDED" :
+                    indicators > 0 ? "REVIEW PERMISSIONS" :
+                    "NO BASIC RULE TRIGGERED")
+            .append("\n\nIndikator hanya membantu menentukan hal yang perlu diperiksa. ")
+            .append("Ini bukan bukti malware dan bukan jaminan aplikasi aman.");
+
+        info("APP SECURITY REVIEW", report.toString());
     }
 
     void pickApk() {

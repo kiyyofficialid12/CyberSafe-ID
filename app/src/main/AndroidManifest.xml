@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
+        android:icon="@drawable/ic_cybersafe_logo"
+        android:roundIcon="@drawable/ic_cybersafe_logo"
         android:allowBackup="false"
         android:label="CyberSafe ID"
         android:theme="@android:style/Theme.Material.NoActionBar"

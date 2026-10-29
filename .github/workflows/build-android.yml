@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build CyberSafe ID
 
 on:
   push:
@@ -25,7 +25,10 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: 'platforms;android-35 build-tools;35.0.0'
+          accept-android-sdk-licenses: true
+          packages: |
+            platforms;android-35
+            build-tools;35.0.0
 
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
@@ -39,13 +42,11 @@ jobs:
           retention-days: 30
 
       - name: Package Android Studio source
-        if: success()
         run: |
           zip -r CyberSafe-ID-AndroidStudio-source.zip . \
             -x ".git/*" ".gradle/*" "app/build/*" "build/*"
 
       - name: Upload source ZIP
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: CyberSafe-ID-AndroidStudio-source
